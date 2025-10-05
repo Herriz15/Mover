@@ -238,13 +238,28 @@ fn resolve_codex_bin(path: &Path) -> Result<PathBuf> {
     }
 
     if path.is_dir() {
-        let candidates = ["codex", "codex.exe", "codex.cmd", "codex.ps1", "codex.bat"];
+        #[cfg(windows)]
+        let candidates = ["codex.cmd", "codex.exe", "codex.bat", "codex.ps1", "codex"];
+        #[cfg(not(windows))]
+        let candidates = ["codex", "codex.sh", "codex.bin"];
 
         for candidate in candidates {
             let candidate_path = path.join(candidate);
-            if candidate_path.is_file() {
-                return Ok(candidate_path);
+            if !candidate_path.is_file() {
+                continue;
             }
+
+            #[cfg(windows)]
+            {
+                if candidate_path.extension().is_none() {
+                    // On Windows, extensionless files in the npm shim directory are often
+                    // shell snippets that cannot be launched directly. Prefer wrappers that
+                    // have a valid executable extension.
+                    continue;
+                }
+            }
+
+            return Ok(candidate_path);
         }
 
         bail!(
