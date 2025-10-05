@@ -23,7 +23,6 @@ cargo build --release
 
 The resulting binary will live in `target/release/mover`.
 
-
 ## Usage
 
 ```bash
@@ -33,6 +32,9 @@ mover --codex-bin /usr/local/bin/codex --model llama3.2:3b -- --profile dev
 Key flags:
 
 * `--codex-bin`: Path to the Codex executable (defaults to `codex` on `$PATH`).
+  On Windows you can also point this at the directory where Node-based
+  shims (such as `codex.cmd` or `codex.ps1`) live; Mover will resolve the
+  actual launcher for you.
 * `--ollama-bin`: Path to the `ollama` executable (defaults to `ollama`).
 * `--model`: Which Ollama model to pull and warm (defaults to `llama3.2:3b`).
 * `--host` / `--port`: Where the Ollama server should listen. If a server is

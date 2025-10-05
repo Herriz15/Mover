@@ -1,3 +1,4 @@
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
@@ -13,7 +14,7 @@ use ureq::AgentBuilder;
 struct Cli {
     /// Path to the Codex executable (defaults to `codex` on $PATH)
     #[arg(long, default_value = "codex")]
-    codex_bin: String,
+    codex_bin: PathBuf,
 
     /// Additional arguments passed to the Codex executable
     #[arg(trailing_var_arg = true)]
@@ -215,8 +216,9 @@ fn warm_model(cli: &Cli) -> Result<()> {
 
 fn run_codex(cli: &Cli) -> Result<ExitStatus> {
     let base_url = format!("http://{}:{}/v1", cli.host, cli.port);
-    println!("[mover] launching Codex via `{}`", cli.codex_bin);
-    let mut command = Command::new(&cli.codex_bin);
+    let codex_path = resolve_codex_bin(&cli.codex_bin)?;
+    println!("[mover] launching Codex via `{}`", codex_path.display());
+    let mut command = Command::new(&codex_path);
     command
         .args(&cli.codex_args)
         .env("OPENAI_API_BASE", &base_url)
@@ -228,6 +230,41 @@ fn run_codex(cli: &Cli) -> Result<ExitStatus> {
         .stderr(Stdio::inherit());
     let status = command.status().context("failed to launch Codex")?;
     Ok(status)
+}
+
+fn resolve_codex_bin(path: &Path) -> Result<PathBuf> {
+    if path.as_os_str().is_empty() {
+        bail!("`--codex-bin` cannot be empty");
+    }
+
+    if path.is_dir() {
+        let candidates = ["codex", "codex.exe", "codex.cmd", "codex.ps1", "codex.bat"];
+
+        for candidate in candidates {
+            let candidate_path = path.join(candidate);
+            if candidate_path.is_file() {
+                return Ok(candidate_path);
+            }
+        }
+
+        bail!(
+            "`--codex-bin` points at directory `{}` but no Codex executable was found inside. Specify the executable directly or place it next to one of: {:?}.",
+            path.display(),
+            candidates
+        );
+    }
+
+    if path.is_file() {
+        return Ok(path.to_path_buf());
+    }
+
+    match which::which(path) {
+        Ok(resolved) => Ok(resolved),
+        Err(_) => bail!(
+            "failed to locate Codex executable at `{}` or on PATH",
+            path.display()
+        ),
+    }
 }
 
 fn format_exit_status(status: ExitStatus) -> String {
