@@ -26,8 +26,18 @@ The resulting binary will live in `target/release/mover`.
 ## Usage
 
 ```bash
-mover --codex-bin /usr/local/bin/codex --model llama3.2:3b -- --profile dev
+mover --codex-bin /usr/local/bin/codex --model llama3.2:3b
 ```
+
+If you need to pass extra flags to Codex, append them after `--`. For example,
+to select a specific Codex profile you would run
+
+```bash
+mover --codex-bin /usr/local/bin/codex --model llama3.2:3b -- --profile my-profile
+```
+
+Make sure the profile you reference already exists in your Codex configuration;
+otherwise Codex will exit with an error before Mover can hand over control.
 
 Key flags:
 
